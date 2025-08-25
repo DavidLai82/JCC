@@ -1,7 +1,7 @@
-import React from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
+import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './context/AuthContext'
 
 // Import all page components
@@ -16,6 +16,9 @@ import Leadership from './pages/Leadership'
 import Live from './pages/Live'
 import Ministries from './pages/Ministries'
 import Services from './pages/Services'
+import Login from './pages/Login'
+import Profile from './pages/Profile'
+import Test from './pages/Test'
 
 function App() {
   return (
@@ -34,6 +37,13 @@ function App() {
             <Route path="/live" element={<Live />} />
             <Route path="/give" element={<Give />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/test" element={<Test />} />
             {/* 404 fallback */}
             <Route path="*" element={
               <div className="min-h-screen flex items-center justify-center">

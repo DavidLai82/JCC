@@ -122,7 +122,7 @@ const Services: React.FC = () => {
                     <p className="text-gray-700 leading-relaxed mb-6">{service.description}</p>
                     <div className="space-y-2">
                       <h4 className="font-semibold text-gray-900 mb-3">What to Expect:</h4>
-                      {service.whatToExpect.map((item, idx) => (
+                      {service.whatToExpect?.map((item, idx) => (
                         <div key={idx} className="flex items-start">
                           <div className="w-2 h-2 bg-primary-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                           <span className="text-gray-600">{item}</span>

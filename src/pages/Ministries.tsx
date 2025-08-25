@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Users, Heart, Calendar, MapPin, Clock, Mail, Phone, ArrowRight } from 'lucide-react'
+import { Users, Heart, Calendar, MapPin, Clock, Mail, ArrowRight } from 'lucide-react'
 import { ministries } from '../data/mockData'
 
 const Ministries: React.FC = () => {

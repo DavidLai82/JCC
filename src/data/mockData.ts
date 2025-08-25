@@ -6,7 +6,6 @@ import {
   Testimonial,
   Announcement,
   SermonSeries,
-  Sermon,
   SchoolInfo,
   BranchInfo
 } from '../types'

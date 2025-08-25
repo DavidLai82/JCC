@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { supabase } from '../lib/supabaseClient'
 
 // Types for user and authentication
 interface User {
@@ -14,7 +15,7 @@ interface AuthContextType {
   isLoading: boolean
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   register: (email: string, password: string, name: string) => Promise<void>
 }
 
@@ -28,55 +29,109 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Mock authentication functions - replace with real authentication service
+  // Supabase authentication functions
   const login = async (email: string, password: string) => {
     setIsLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Mock successful login
-      const mockUser: User = {
-        id: '1',
-        email: email,
-        name: email.split('@')[0],
-        role: 'member'
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        throw new Error(error.message)
       }
-      
-      setUser(mockUser)
-      localStorage.setItem('jcc_user', JSON.stringify(mockUser))
+
+      if (data.user) {
+        // Fetch user profile from database
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, email, name, role, avatar')
+          .eq('id', data.user.id)
+          .single()
+
+        if (profileError) {
+          console.warn('Failed to fetch user profile:', profileError)
+          // Create a basic profile if one doesn't exist
+          const mockUser: User = {
+            id: data.user.id,
+            email: data.user.email || email,
+            name: data.user.user_metadata?.name || email.split('@')[0],
+            role: 'member'
+          }
+          setUser(mockUser)
+        } else {
+          setUser(profileData as User)
+        }
+      }
     } catch (error) {
       console.error('Login failed:', error)
-      throw new Error('Login failed')
+      throw error
     } finally {
       setIsLoading(false)
     }
   }
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem('jcc_user')
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      localStorage.removeItem('jcc_user')
+    } catch (error) {
+      console.error('Logout failed:', error)
+      throw error
+    }
   }
 
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Mock successful registration
-      const mockUser: User = {
-        id: Date.now().toString(),
-        email: email,
-        name: name,
-        role: 'member'
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name,
+          },
+        },
+      })
+
+      if (error) {
+        throw new Error(error.message)
       }
-      
-      setUser(mockUser)
-      localStorage.setItem('jcc_user', JSON.stringify(mockUser))
+
+      if (data.user) {
+        // Create user profile in database
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: data.user.id,
+              email: email,
+              name: name,
+              role: 'member'
+            }
+          ])
+          .select()
+          .single()
+
+        if (profileError) {
+          console.warn('Failed to create user profile:', profileError)
+        }
+
+        const user: User = {
+          id: data.user.id,
+          email: email,
+          name: name,
+          role: 'member'
+        }
+        
+        setUser(user)
+        localStorage.setItem('jcc_user', JSON.stringify(user))
+      }
     } catch (error) {
       console.error('Registration failed:', error)
-      throw new Error('Registration failed')
+      throw error
     } finally {
       setIsLoading(false)
     }
@@ -84,21 +139,61 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Check for existing user session on mount
   useEffect(() => {
-    const checkAuthState = () => {
+    const checkAuthState = async () => {
       try {
-        const savedUser = localStorage.getItem('jcc_user')
-        if (savedUser) {
-          setUser(JSON.parse(savedUser))
+        // Check if there's an existing session
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user) {
+          // Fetch user profile from database
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id, email, name, role, avatar')
+            .eq('id', session.user.id)
+            .single()
+
+          if (!error && data) {
+            setUser(data as User)
+          } else {
+            // Create a basic profile if one doesn't exist
+            const mockUser: User = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
+              role: 'member'
+            }
+            setUser(mockUser)
+          }
         }
       } catch (error) {
         console.error('Failed to restore user session:', error)
-        localStorage.removeItem('jcc_user')
       } finally {
         setIsLoading(false)
       }
     }
 
     checkAuthState()
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        // Update user state when auth state changes
+        const user: User = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || '',
+          role: 'member'
+        }
+        setUser(user)
+      } else {
+        setUser(null)
+      }
+    })
+
+    // Clean up subscription on unmount
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   const value: AuthContextType = {

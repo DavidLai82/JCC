@@ -1,17 +1,35 @@
 import React, { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, ChevronDown } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Menu, X, ChevronDown, User } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout, isAuthenticated } = useAuth()
 
   const navigation = [
     { name: 'Home', href: '/' },
-    { name: 'About', href: '/about' },
-    { name: 'Services', href: '/services' },
-    { name: 'Leadership', href: '/leadership' },
+    {
+      name: 'About',
+      href: '/about',
+      children: [
+        { name: 'Our Story', href: '/about' },
+        { name: 'Leadership', href: '/leadership' },
+        { name: 'Our Beliefs', href: '/about#beliefs' },
+      ]
+    },
+    {
+      name: 'Services',
+      href: '/services',
+      children: [
+        { name: 'Service Times', href: '/services' },
+        { name: 'What to Expect', href: '/services#what-to-expect' },
+      ]
+    },
     {
       name: 'Ministries',
       href: '/ministries',
@@ -22,12 +40,20 @@ const Header: React.FC = () => {
         { name: 'Children\'s Ministry', href: '/ministries#children' },
       ]
     },
-    { name: 'Education', href: '/education' },
-    { name: 'Events', href: '/events' },
-    { name: 'Gallery', href: '/gallery' },
-    { name: 'Live', href: '/live' },
-    { name: 'Give', href: '/give' },
+    {
+      name: 'More',
+      href: '#',
+      children: [
+        { name: 'Education', href: '/education' },
+        { name: 'Events', href: '/events' },
+        { name: 'Gallery', href: '/gallery' },
+        { name: 'Give', href: '/give' },
+      ]
+    },
+    { name: 'Watch Online', href: '/live' },
     { name: 'Contact', href: '/contact' },
+    // Development link - should be removed in production
+    { name: 'Test', href: '/test' },
   ]
 
   const isActive = (path: string) => {
@@ -35,6 +61,15 @@ const Header: React.FC = () => {
       return location.pathname === '/'
     }
     return location.pathname.startsWith(path)
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      navigate('/')
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
   }
 
   return (
@@ -104,15 +139,105 @@ const Header: React.FC = () => {
             ))}
           </nav>
 
-          {/* CTA Button */}
-          <div className="hidden lg:flex items-center">
-            <Link to="/live" className="btn-primary">
-              Watch Live
-            </Link>
+          {/* Desktop Auth Section */}
+          <div className="hidden lg:flex items-center space-x-4">
+            {isAuthenticated ? (
+              <div className="relative">
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center text-sm rounded-full focus:outline-none"
+                >
+                  <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
+                    <User className="h-5 w-5 text-primary-600" />
+                  </div>
+                  <span className="ml-2 text-sm font-medium text-gray-700 hidden md:block">
+                    {user?.name || 'User'}
+                  </span>
+                </button>
+                
+                {isUserMenuOpen && (
+                  <div 
+                    className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5"
+                    onMouseLeave={() => setIsUserMenuOpen(false)}
+                  >
+                    <div className="py-1">
+                      <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
+                        <p className="font-medium">{user?.name}</p>
+                        <p className="text-gray-500 truncate">{user?.email}</p>
+                      </div>
+                      <Link
+                        to="/profile"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        Your Profile
+                      </Link>
+                      <button
+                        onClick={() => {
+                          handleLogout()
+                          setIsUserMenuOpen(false)
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link to="/login" className="btn-primary">
+                Sign In
+              </Link>
+            )}
           </div>
 
           {/* Mobile menu button */}
-          <div className="lg:hidden">
+          <div className="lg:hidden flex items-center">
+            {isAuthenticated ? (
+              <div className="relative mr-2">
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center text-sm rounded-full focus:outline-none"
+                >
+                  <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">
+                    <User className="h-5 w-5 text-primary-600" />
+                  </div>
+                </button>
+                
+                {isUserMenuOpen && (
+                  <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                    <div className="py-1">
+                      <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
+                        <p className="font-medium">{user?.name}</p>
+                        <p className="text-gray-500 truncate">{user?.email}</p>
+                      </div>
+                      <Link
+                        to="/profile"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        Your Profile
+                      </Link>
+                      <button
+                        onClick={() => {
+                          handleLogout()
+                          setIsUserMenuOpen(false)
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link to="/login" className="btn-primary mr-2">
+                Sign In
+              </Link>
+            )}
+            
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 rounded-md text-gray-600 hover:text-primary-600 hover:bg-gray-100 transition-colors duration-200"
@@ -162,7 +287,7 @@ const Header: React.FC = () => {
                   className="block w-full text-center btn-primary"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Watch Live
+                  Watch Online
                 </Link>
               </div>
             </div>

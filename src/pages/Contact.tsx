@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { MapPin, Phone, Mail, Clock, Send, MessageCircle } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, Send, MessageCircle, CheckCircle, AlertCircle } from 'lucide-react'
 import { contactInfo, services } from '../data/mockData'
 
 interface ContactFormData {
@@ -22,7 +22,9 @@ const Contact: React.FC = () => {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [submitMessage, setSubmitMessage] = useState('')
+  const [errors, setErrors] = useState<Partial<ContactFormData>>({})
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -30,16 +32,66 @@ const Contact: React.FC = () => {
       ...prev,
       [name]: value
     }))
+    
+    // Clear error when user starts typing
+    if (errors[name as keyof ContactFormData]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }))
+    }
+  }
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<ContactFormData> = {}
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required'
+    }
+    
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address'
+    }
+    
+    if (!formData.subject.trim()) {
+      newErrors.subject = 'Subject is required'
+    }
+    
+    if (!formData.message.trim()) {
+      newErrors.message = 'Message is required'
+    } else if (formData.message.trim().length < 10) {
+      newErrors.message = 'Message must be at least 10 characters long'
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
     
-    // Simulate form submission
-    setTimeout(() => {
-      setSubmitMessage('Thank you for your message! We will get back to you soon.')
-      setIsSubmitting(false)
+    if (!validateForm()) {
+      return
+    }
+    
+    setIsSubmitting(true)
+    setSubmitStatus('idle')
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Mock success response
+      setSubmitStatus('success')
+      setSubmitMessage(
+        formData.type === 'prayer_request' 
+          ? 'Thank you for your prayer request. Our prayer team will be interceding for you.'
+          : 'Thank you for your message! We will get back to you within 24-48 hours.'
+      )
+      
+      // Reset form
       setFormData({
         name: '',
         email: '',
@@ -48,7 +100,13 @@ const Contact: React.FC = () => {
         message: '',
         type: 'general'
       })
-    }, 2000)
+      setErrors({})
+    } catch (error) {
+      setSubmitStatus('error')
+      setSubmitMessage('Sorry, there was an error sending your message. Please try again or contact us directly.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -70,9 +128,18 @@ const Contact: React.FC = () => {
             {/* Contact Form */}
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-6">Send us a Message</h2>
-              {submitMessage && (
-                <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg mb-6">
-                  {submitMessage}
+              {submitStatus !== 'idle' && (
+                <div className={`p-4 rounded-lg mb-6 flex items-center ${
+                  submitStatus === 'success' 
+                    ? 'bg-green-50 border border-green-200 text-green-700' 
+                    : 'bg-red-50 border border-red-200 text-red-700'
+                }`}>
+                  {submitStatus === 'success' ? (
+                    <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+                  )}
+                  <span>{submitMessage}</span>
                 </div>
               )}
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -88,9 +155,17 @@ const Contact: React.FC = () => {
                       value={formData.name}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${
+                        errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                       placeholder="Your full name"
                     />
+                    {errors.name && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.name}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -103,9 +178,17 @@ const Contact: React.FC = () => {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${
+                        errors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                       placeholder="your.email@example.com"
                     />
+                    {errors.email && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {errors.email}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -153,9 +236,17 @@ const Contact: React.FC = () => {
                     value={formData.subject}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${
+                      errors.subject ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
                     placeholder="What is this about?"
                   />
+                  {errors.subject && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.subject}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -169,9 +260,17 @@ const Contact: React.FC = () => {
                     onChange={handleChange}
                     required
                     rows={6}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors ${
+                      errors.message ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
                     placeholder="Your message here..."
                   />
+                  {errors.message && (
+                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.message}
+                    </p>
+                  )}
                 </div>
 
                 <button

@@ -1,10 +1,10 @@
 import React from 'react'
 import { Mail, Phone, Heart, Users, Crown, Award } from 'lucide-react'
-import { leaders } from '../data/mockData'
 
 const Leadership: React.FC = () => {
-  const seniorLeaders = leaders.filter(leader => leader.role === 'senior_pastor' || leader.role === 'associate_pastor')
-  const boardMembers = leaders.filter(leader => leader.role === 'elder' || leader.role === 'deacon')
+  // Filter leaders by role for potential future use
+  // const seniorLeaders = leaders.filter(leader => leader.role === 'senior_pastor' || leader.role === 'associate_pastor')
+  // const boardMembers = leaders.filter(leader => leader.role === 'elder' || leader.role === 'deacon')
 
   const leadershipTeam = [
     {
